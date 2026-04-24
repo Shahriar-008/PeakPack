@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GoalType {
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  ENDURANCE
+  CLEAN_EATING
+  CUSTOM
+}
+
+enum PackRole {
+  ADMIN
+  MEMBER
+}
+
+enum MealType {
+  CLEAN
+  CHEAT
+  SKIP
+}
+
+enum ChallengeType {
+  FITNESS
+  DIET
+  PACK
+  COMMUNITY
+}
+
+enum ReactionType {
+  FIRE
+  STRONG
+  LETS_GO
+}
+
+model User {
+  id            String   @id @default(cuid())
+  clerkUserId   String   @unique
+  email         String   @unique
+  name          String
+  avatarUrl     String?
+  bio           String?
+  location      String?
+  goalType      GoalType?
+  goalTarget    String?
+  goalTimeframe String?
+  level         Int      @default(1)
+  xp            Int      @default(0)
+  streak        Int      @default(0)
+  streakFreezes Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  adminPacks        Pack[]      @relation("PackAdmin")
+  packMemberships   PackMember[]
+  checkIns          CheckIn[]
+  xpEvents          XPEvent[]
+  badges            Badge[]
+  reactions         Reaction[]
+  comments          Comment[]
+  challengesCreated Challenge[] @relation("ChallengeCreator")
+}
+
+model Pack {
+  id          String   @id @default(cuid())
+  name        String
+  goalType    GoalType
+  description String?
+  inviteCode  String   @unique
+  minMembers  Int      @default(5)
+  maxMembers  Int      @default(15)
+  adminId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  admin      User        @relation("PackAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+  members    PackMember[]
+  checkIns   CheckIn[]
+  challenges Challenge[]
+
+  @@index([adminId])
+}
+
+model PackMember {
+  packId   String
+  userId   String
+  role     PackRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  pack Pack @relation(fields: [packId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([packId, userId])
+  @@index([userId])
+}
+
+model CheckIn {
+  id                     String   @id @default(cuid())
+  userId                 String
+  packId                 String
+  date                   DateTime
+  workoutDone            Boolean
+  workoutType            String?
+  workoutDurationMinutes Int?
+  mealType               MealType
+  restDay                Boolean  @default(false)
+  xpEarned               Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pack      Pack       @relation(fields: [packId], references: [id], onDelete: Cascade)
+  xpEvents  XPEvent[]
+  reactions Reaction[]
+  comments  Comment[]
+
+  @@unique([userId, date])
+  @@index([packId, date])
+  @@index([userId, createdAt])
+}
+
+model XPEvent {
+  id         String   @id @default(cuid())
+  userId     String
+  checkInId  String?
+  actionType String
+  xp         Int
+  createdAt  DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIn CheckIn? @relation(fields: [checkInId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([checkInId])
+}
+
+model Badge {
+  id       String   @id @default(cuid())
+  userId   String
+  badgeKey String
+  earnedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeKey])
+  @@index([userId, earnedAt])
+}
+
+model Challenge {
+  id          String        @id @default(cuid())
+  creatorId   String
+  type        ChallengeType
+  title       String
+  description String?
+  goalMetric  String
+  packId      String?
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  creator User  @relation("ChallengeCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  pack    Pack? @relation(fields: [packId], references: [id], onDelete: SetNull)
+
+  @@index([creatorId])
+  @@index([packId])
+  @@index([endDate])
+}
+
+model Reaction {
+  id           String       @id @default(cuid())
+  userId       String
+  checkInId    String
+  reactionType ReactionType
+  createdAt    DateTime     @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIn CheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, checkInId])
+  @@index([checkInId, createdAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  checkInId String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkIn CheckIn @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+
+  @@index([checkInId, createdAt])
+  @@index([userId, createdAt])
+}
