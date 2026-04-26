@@ -1,0 +1,111 @@
+# ══════════════════════════════════════════════════════════════
+# PeakPack — Coolify Docker Compose
+#
+# ⚠  COOLIFY RULES (read before editing):
+#   1. NO `networks:` block — Coolify auto-manages networking
+#   2. NO nginx — Coolify uses Traefik as reverse proxy
+#   3. NO postgres/redis/minio — provisioned as Coolify Resources
+#   4. Services talk to each other by service name (e.g. api:4000)
+#   5. Domains are assigned in the Coolify UI per-service
+#
+# Routing (separate subdomains):
+#   yourdomain.com        → frontend:3000
+#   api.yourdomain.com    → api:4000  (also handles Socket.IO)
+#   media.yourdomain.com  → MinIO (Coolify Resource, exposed separately)
+# ══════════════════════════════════════════════════════════════
+
+services:
+
+  # ── Next.js Frontend ─────────────────────────────────────────
+  # Coolify UI: assign domain → yourdomain.com  (port 3000)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Build-time vars baked into the Next.js bundle
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+        NEXTAUTH_URL: ${NEXTAUTH_URL}
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── Express API ───────────────────────────────────────────────
+  # Coolify UI: assign domain → api.yourdomain.com  (port 4000)
+  # Coolify UI: Pre-deploy command → npx prisma migrate deploy
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_PORT=${MINIO_PORT:-9000}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-true}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_AVATARS=${MINIO_BUCKET_AVATARS:-avatars}
+      - MINIO_BUCKET_PHOTOS=${MINIO_BUCKET_PHOTOS:-progress-photos}
+      - MINIO_PUBLIC_URL=${MINIO_PUBLIC_URL}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      # CORS: must match your frontend domain exactly
+      - SOCKET_CORS_ORIGIN=${SOCKET_CORS_ORIGIN}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - APP_URL=${APP_URL}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── BullMQ Worker ─────────────────────────────────────────────
+  # No domain — runs in background processing email/notification jobs
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: node dist/worker.js
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_PORT=${MINIO_PORT:-9000}
+      - MINIO_USE_SSL=${MINIO_USE_SSL:-true}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_AVATARS=${MINIO_BUCKET_AVATARS:-avatars}
+      - MINIO_BUCKET_PHOTOS=${MINIO_BUCKET_PHOTOS:-progress-photos}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+    restart: unless-stopped

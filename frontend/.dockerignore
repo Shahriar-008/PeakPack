@@ -1,0 +1,26 @@
+# Dependencies (installed inside Docker)
+node_modules
+npm-debug.log*
+
+# Build output (built inside Docker)
+.next
+dist
+
+# Environment files (never bake secrets into image)
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+
+# Docker files themselves
+Dockerfile
+.dockerignore

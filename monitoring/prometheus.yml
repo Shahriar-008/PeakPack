@@ -1,0 +1,45 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  # external_labels can be added here for multi-cluster setups
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+rule_files: []
+  # - "alert_rules.yml"
+
+scrape_configs:
+
+  # ── Prometheus itself ────────────────────────────────────────
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ── PeakPack API (Express + prom-client) ─────────────────────
+  - job_name: "peakpack_api"
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ["api:4000"]
+    scrape_interval: 15s
+
+  # ── Node Exporter (host OS metrics) ──────────────────────────
+  # Uncomment when node-exporter is added to docker-compose
+  # - job_name: "node_exporter"
+  #   static_configs:
+  #     - targets: ["node-exporter:9100"]
+
+  # ── PostgreSQL Exporter ────────────────────────────────────────
+  # Uncomment when postgres-exporter is added to docker-compose
+  # - job_name: "postgres"
+  #   static_configs:
+  #     - targets: ["postgres-exporter:9187"]
+
+  # ── Redis Exporter ────────────────────────────────────────────
+  # Uncomment when redis-exporter is added to docker-compose
+  # - job_name: "redis"
+  #   static_configs:
+  #     - targets: ["redis-exporter:9121"]
