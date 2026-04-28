@@ -22,10 +22,9 @@
 
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HttpServer } from 'http';
-import jwt from 'jsonwebtoken';
 import { prisma } from './prisma';
 import { logger } from './logger';
-import type { AccessTokenPayload } from '../types';
+import { getUserFromToken } from './supabase';
 
 // ── Augment Socket with authenticated user ────────────────────
 
@@ -40,8 +39,6 @@ declare module 'socket.io' {
 // ── Module-level singleton ────────────────────────────────────
 
 let _io: SocketIOServer | null = null;
-
-const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev-access-secret';
 
 // ── Init ──────────────────────────────────────────────────────
 
@@ -73,19 +70,19 @@ export function initSocket(httpServer: HttpServer): SocketIOServer {
         return next(new Error('Authentication required'));
       }
 
-      const payload = jwt.verify(token, JWT_ACCESS_SECRET) as AccessTokenPayload;
+      const user = await getUserFromToken(token);
 
-      if (payload.type !== 'access') {
-        return next(new Error('Invalid token type'));
+      if (!user) {
+        return next(new Error('Invalid or expired token'));
       }
 
       // Attach user info to socket
-      socket.userId = payload.sub;
-      socket.email  = payload.email;
+      socket.userId = user.id;
+      socket.email  = user.email;
 
       // Look up pack membership
       const membership = await prisma.packMember.findUnique({
-        where: { userId: payload.sub },
+        where: { userId: user.id },
         select: { packId: true },
       });
       socket.packId = membership?.packId ?? null;

@@ -1,21 +1,18 @@
 // ══════════════════════════════════════════════════════════════
-// PeakPack — JWT Auth Middleware
+// PeakPack — Supabase Auth Middleware
 // ══════════════════════════════════════════════════════════════
 
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { getUserFromToken } from '../lib/supabase';
 import { logger } from '../lib/logger';
-import type { AccessTokenPayload } from '../types';
-
-const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'dev-access-secret';
 
 /**
- * Middleware that verifies the Bearer JWT from the Authorization header
- * and attaches req.user = { id, email }.
+ * Middleware that verifies the Supabase Bearer token from the Authorization
+ * header and attaches req.user = { id, email }.
  *
  * Usage: router.use(authMiddleware) or router.get('/path', authMiddleware, handler)
  */
-export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -31,12 +28,12 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   const token = authHeader.split(' ')[1];
 
   try {
-    const payload = jwt.verify(token, JWT_ACCESS_SECRET) as AccessTokenPayload;
+    const user = await getUserFromToken(token);
 
-    if (payload.type !== 'access') {
+    if (!user) {
       res.status(401).json({
         error: {
-          message: 'Invalid token type',
+          message: 'Invalid or expired token',
           code: 'INVALID_TOKEN',
         },
       });
@@ -45,23 +42,13 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
 
     // Attach user to request
     req.user = {
-      id: payload.sub,
-      email: payload.email,
+      id: user.id,
+      email: user.email,
     };
 
     next();
   } catch (error: any) {
-    if (error.name === 'TokenExpiredError') {
-      res.status(401).json({
-        error: {
-          message: 'Token expired. Please refresh your token.',
-          code: 'TOKEN_EXPIRED',
-        },
-      });
-      return;
-    }
-
-    logger.warn('JWT verification failed', { error: error.message });
+    logger.warn('Auth middleware failed', { error: error.message });
     res.status(401).json({
       error: {
         message: 'Invalid token',
@@ -74,7 +61,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
 /**
  * Optional auth middleware — attaches user if token valid, continues either way.
  */
-export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -85,11 +72,11 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
   const token = authHeader.split(' ')[1];
 
   try {
-    const payload = jwt.verify(token, JWT_ACCESS_SECRET) as AccessTokenPayload;
-    if (payload.type === 'access') {
+    const user = await getUserFromToken(token);
+    if (user) {
       req.user = {
-        id: payload.sub,
-        email: payload.email,
+        id: user.id,
+        email: user.email,
       };
     }
   } catch {

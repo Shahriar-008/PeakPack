@@ -55,7 +55,6 @@ enum ChallengeType {
 model User {
   id               String      @id @default(uuid())
   email            String      @unique
-  passwordHash     String?     // null for OAuth users
   name             String
   avatarKey        String?     // MinIO object key
   bio              String?
@@ -77,24 +76,13 @@ model User {
   badges           Badge[]
   reactions        Reaction[]
   comments         Comment[]
-  sessions         Session[]
   challengeMembers ChallengeParticipant[]
   adminOfPack      Pack?       @relation("PackAdmin")
 
   @@index([xp])
 }
 
-model Session {
-  id          String   @id @default(uuid())
-  userId      String
-  tokenHash   String   @unique
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-}
+// Session model removed — Supabase Auth manages sessions externally
 
 model Pack {
   id          String     @id @default(uuid())

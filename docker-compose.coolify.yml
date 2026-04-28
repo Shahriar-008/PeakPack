@@ -4,7 +4,7 @@
 # ⚠  COOLIFY RULES (read before editing):
 #   1. NO `networks:` block — Coolify auto-manages networking
 #   2. NO nginx — Coolify uses Traefik as reverse proxy
-#   3. NO postgres/redis/minio — provisioned as Coolify Resources
+#   3. NO postgres/minio — postgres is on Supabase, MinIO is a Coolify Resource
 #   4. Services talk to each other by service name (e.g. api:4000)
 #   5. Domains are assigned in the Coolify UI per-service
 #
@@ -26,16 +26,14 @@ services:
         # Build-time vars baked into the Next.js bundle
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
-        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-        NEXTAUTH_URL: ${NEXTAUTH_URL}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - NEXT_PUBLIC_SOCKET_URL=${NEXT_PUBLIC_SOCKET_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
@@ -56,9 +54,8 @@ services:
       - PORT=4000
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
-      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
       - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-true}
@@ -74,8 +71,6 @@ services:
       - EMAIL_FROM=${EMAIL_FROM}
       # CORS: must match your frontend domain exactly
       - SOCKET_CORS_ORIGIN=${SOCKET_CORS_ORIGIN}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - APP_URL=${APP_URL}
     restart: unless-stopped
     healthcheck:
@@ -96,6 +91,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
       - MINIO_PORT=${MINIO_PORT:-9000}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-true}

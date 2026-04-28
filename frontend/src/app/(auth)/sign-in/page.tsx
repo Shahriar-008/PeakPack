@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useMutation } from '@tanstack/react-query';
 import { Mountain, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { authApi, setAccessToken, setRefreshToken } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
+import { authApi } from '@/lib/api';
 import { useUserStore } from '@/store/user';
 import { Button, Input, Card } from '@/components/ui';
 
@@ -16,16 +16,49 @@ export default function SignInPage() {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd]   = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
 
-  const { mutate, isPending, error: apiError } = useMutation({
-    mutationFn: () => authApi.login({ email, password }),
-    onSuccess: (data) => {
-      setAccessToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
-      setUser(data.user);
-      router.push(data.user.onboardingDone ? '/dashboard' : '/onboarding');
-    },
-  });
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      if (data.session) {
+        // Sync Prisma user record and populate store
+        const user = await authApi.syncUser();
+        setUser(user);
+        router.push(user.onboardingDone ? '/dashboard' : '/onboarding');
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.error?.message || 'Sign in failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+    if (oauthError) {
+      setError(oauthError.message);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[rgb(var(--background))]">
@@ -49,7 +82,7 @@ export default function SignInPage() {
 
         <Card className="p-6">
           <form
-            onSubmit={(e) => { e.preventDefault(); mutate(); }}
+            onSubmit={handleSignIn}
             className="space-y-4"
           >
             <Input
@@ -86,13 +119,13 @@ export default function SignInPage() {
               </button>
             </div>
 
-            {apiError && (
+            {error && (
               <p className="text-sm text-red-400 text-center">
-                {(apiError as any)?.response?.data?.error?.message || 'Invalid credentials'}
+                {error}
               </p>
             )}
 
-            <Button type="submit" className="w-full" size="lg" loading={isPending}>
+            <Button type="submit" className="w-full" size="lg" loading={loading}>
               Sign In <ArrowRight className="w-4 h-4" />
             </Button>
 
@@ -102,7 +135,7 @@ export default function SignInPage() {
               <div className="flex-1 h-px bg-white/8" />
             </div>
 
-            <Button type="button" variant="outline" className="w-full" onClick={() => authApi.googleAuth()}>
+            <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn}>
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>

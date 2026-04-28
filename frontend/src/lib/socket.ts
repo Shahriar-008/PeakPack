@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { io, Socket } from 'socket.io-client';
-import { getAccessToken } from './api';
+import { supabase } from './supabase';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
 
@@ -11,12 +11,13 @@ let socket: Socket | null = null;
 
 /**
  * Get or create the Socket.IO client connection.
- * Connects with JWT auth token from local storage.
+ * Connects with Supabase access token for authentication.
  */
-export function getSocket(): Socket {
+export async function getSocket(): Promise<Socket> {
   if (socket && socket.connected) return socket;
 
-  const token = getAccessToken();
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
 
   socket = io(SOCKET_URL, {
     auth: {
@@ -60,9 +61,9 @@ export function disconnectSocket(): void {
 /**
  * Reconnect with a new token (after refresh).
  */
-export function reconnectSocket(): void {
+export async function reconnectSocket(): Promise<void> {
   disconnectSocket();
-  getSocket();
+  await getSocket();
 }
 
 export { socket };

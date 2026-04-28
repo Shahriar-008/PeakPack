@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useMutation } from '@tanstack/react-query';
 import { Mountain, Mail, Lock, User as UserIcon, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { authApi, setAccessToken, setRefreshToken } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
+import { authApi } from '@/lib/api';
 import { useUserStore } from '@/store/user';
 import { Button, Input, Card } from '@/components/ui';
 
@@ -19,16 +19,8 @@ export default function SignUpPage() {
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const { mutate, isPending, error: apiError } = useMutation({
-    mutationFn: () => authApi.register({ name, email, password }),
-    onSuccess: (data) => {
-      setAccessToken(data.accessToken);
-      setRefreshToken(data.refreshToken);
-      setUser(data.user);
-      router.push('/onboarding');
-    },
-  });
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -40,9 +32,58 @@ export default function SignUpPage() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) mutate();
+    if (!validate()) return;
+
+    setApiError(null);
+    setLoading(true);
+
+    try {
+      // Sign up with Supabase Auth
+      const { data, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          },
+        },
+      });
+
+      if (authError) {
+        setApiError(authError.message);
+        return;
+      }
+
+      if (data.session) {
+        // Session available immediately (email confirmation disabled)
+        // Sync the Prisma User record
+        const user = await authApi.syncUser(name);
+        setUser(user);
+        router.push('/onboarding');
+      } else {
+        // Email confirmation required — Supabase sent a confirmation email
+        // Redirect to a confirmation notice page or show a message
+        setApiError('Check your email to confirm your account, then sign in.');
+      }
+    } catch (err: any) {
+      setApiError(err?.response?.data?.error?.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+      },
+    });
+    if (oauthError) {
+      setApiError(oauthError.message);
+    }
   };
 
   return (
@@ -127,11 +168,11 @@ export default function SignUpPage() {
 
             {apiError && (
               <p className="text-sm text-red-400 text-center">
-                {(apiError as any)?.response?.data?.error?.message || 'Registration failed'}
+                {apiError}
               </p>
             )}
 
-            <Button type="submit" className="w-full" size="lg" loading={isPending}>
+            <Button type="submit" className="w-full" size="lg" loading={loading}>
               Create Account <ArrowRight className="w-4 h-4" />
             </Button>
 
@@ -145,7 +186,7 @@ export default function SignUpPage() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => authApi.googleAuth()}
+              onClick={handleGoogleSignUp}
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

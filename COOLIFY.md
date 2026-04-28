@@ -10,14 +10,36 @@ api.yourdomain.com      → Coolify Traefik → api:4000       (Express + Socket
 media.yourdomain.com    → Coolify Traefik → MinIO          (object storage)
 ```
 
-Services **not** in the Docker Compose (managed as Coolify Resources):
-- PostgreSQL 16
-- Redis 7
-- MinIO
+Services **not** in the Docker Compose:
+- **Supabase** (managed — PostgreSQL + Auth)
+- **Redis 7** (Coolify Resource)
+- **MinIO** (Coolify Resource)
 
 ---
 
-## Step 1 — Install Coolify on your VPS
+## Step 1 — Create a Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and create a new project
+2. Note down:
+   - **Project URL**: `https://your-project-ref.supabase.co`
+   - **Anon Key**: from Settings → API
+   - **Service Role Key**: from Settings → API (keep secret!)
+   - **Database Connection String**: from Settings → Database → Connection String (use "Transaction pooler")
+
+### Enable Google OAuth in Supabase
+
+1. Go to **Authentication** → **Providers** → **Google**
+2. Enable it and add your Google OAuth Client ID and Secret
+3. Add authorized redirect URI: `https://your-project-ref.supabase.co/auth/v1/callback`
+4. In Google Cloud Console, add `https://your-project-ref.supabase.co` to authorized JavaScript origins
+
+> [!TIP]
+> Supabase handles all OAuth flows, token refresh, and email verification.
+> You no longer need `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET` in your app's env vars.
+
+---
+
+## Step 2 — Install Coolify on your VPS
 
 SSH into your VPS and run the Coolify installer:
 
@@ -33,7 +55,7 @@ Then open `http://YOUR_VPS_IP:8000` and complete the initial setup.
 
 ---
 
-## Step 2 — Connect your Git repository
+## Step 3 — Connect your Git repository
 
 1. In Coolify → **Sources** → **Add** → **GitHub**
 2. Follow the GitHub App installation flow
@@ -41,20 +63,9 @@ Then open `http://YOUR_VPS_IP:8000` and complete the initial setup.
 
 ---
 
-## Step 3 — Create Coolify Resources
+## Step 4 — Create Coolify Resources
 
 Go to your **Project** → **New Resource** for each of the following:
-
-### PostgreSQL 16
-
-| Setting | Value |
-|---------|-------|
-| Resource type | PostgreSQL |
-| Version | 16 |
-| Database name | `peakpack` |
-| Username | `peakpack` |
-
-After creating, copy the **Connection String** — it will be your `DATABASE_URL`.
 
 ### Redis 7
 
@@ -78,9 +89,12 @@ After creating:
 3. Set both buckets to **public read** (for serving images)
 4. Copy the **Access Key** and **Secret Key**
 
+> [!NOTE]
+> PostgreSQL is **not** created as a Coolify Resource — it's hosted on Supabase.
+
 ---
 
-## Step 4 — Create the Docker Compose Application
+## Step 5 — Create the Docker Compose Application
 
 1. Go to your **Project** → **New Resource** → **Docker Compose**
 2. Select your GitHub repo
@@ -89,7 +103,7 @@ After creating:
 
 ---
 
-## Step 5 — Configure Domains
+## Step 6 — Configure Domains
 
 In the resource settings, expand each service and set its domain:
 
@@ -103,7 +117,7 @@ Coolify will auto-provision SSL certificates via Let's Encrypt for each domain.
 
 ---
 
-## Step 6 — Set Environment Variables
+## Step 7 — Set Environment Variables
 
 In the resource → **Environment Variables** tab, add all of the following:
 
@@ -112,22 +126,19 @@ In the resource → **Environment Variables** tab, add all of the following:
 NODE_ENV=production
 APP_URL=https://yourdomain.com
 
-# ── Database (from Step 3) ───────────────────────────────────
-DATABASE_URL=postgresql://peakpack:PASSWORD@HOST:5432/peakpack
+# ── Supabase (from Step 1) ───────────────────────────────────
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...your-service-role-key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...your-anon-key
 
-# ── Redis (from Step 3) ──────────────────────────────────────
+# ── Database (from Supabase Step 1) ──────────────────────────
+DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+
+# ── Redis (from Step 4) ─────────────────────────────────────
 REDIS_URL=redis://HOST:6379
 
-# ── Auth ──────────────────────────────────────────────────────
-NEXTAUTH_SECRET=<run: openssl rand -base64 32>
-NEXTAUTH_URL=https://yourdomain.com
-JWT_ACCESS_SECRET=<run: openssl rand -base64 32>
-JWT_REFRESH_SECRET=<run: openssl rand -base64 32>
-BCRYPT_ROUNDS=12
-GOOGLE_CLIENT_ID=your_google_oauth_client_id
-GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
-
-# ── MinIO (from Step 3) ──────────────────────────────────────
+# ── MinIO (from Step 4) ─────────────────────────────────────
 MINIO_ENDPOINT=<MinIO internal hostname in Coolify>
 MINIO_PORT=9000
 MINIO_USE_SSL=true
@@ -163,7 +174,7 @@ SOCKET_CORS_ORIGIN=https://yourdomain.com
 
 ---
 
-## Step 7 — Set Pre-deploy Command (Prisma Migrations)
+## Step 8 — Set Pre-deploy Command (Prisma Migrations)
 
 In the **api** service settings:
 
@@ -175,7 +186,7 @@ This runs automatically before each deploy to apply any pending migrations.
 
 ---
 
-## Step 8 — Deploy
+## Step 9 — Deploy
 
 Click **Deploy** in the Coolify UI.
 
@@ -191,7 +202,7 @@ Watch the **Logs** tab to monitor progress.
 
 ---
 
-## Step 9 — Verify Deployment
+## Step 10 — Verify Deployment
 
 Once deployed, run these checks:
 
@@ -216,7 +227,7 @@ Then open `https://yourdomain.com` in a browser, sign up, and complete the onboa
 
 ---
 
-## Step 10 — Set Up GitHub Actions (CI/CD)
+## Step 11 — Set Up GitHub Actions (CI/CD)
 
 Add these secrets to your GitHub repository (**Settings → Secrets → Actions**):
 
@@ -248,19 +259,6 @@ docker logs peakpack-api-1 --tail 100 -f
 
 ---
 
-## Google OAuth Setup
-
-In the [Google Cloud Console](https://console.cloud.google.com):
-
-1. Create OAuth 2.0 credentials
-2. Add authorized redirect URIs:
-   - `https://api.yourdomain.com/api/auth/google/callback`
-3. Add authorized JavaScript origins:
-   - `https://yourdomain.com`
-   - `https://api.yourdomain.com`
-
----
-
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -268,6 +266,7 @@ In the [Google Cloud Console](https://console.cloud.google.com):
 | API returns 502 | Check api service logs; likely `DATABASE_URL` or `REDIS_URL` wrong |
 | Socket.IO disconnects | Ensure `SOCKET_CORS_ORIGIN` matches frontend domain exactly |
 | Images not loading | Check `MINIO_PUBLIC_URL` and bucket public-read policy |
-| Google OAuth fails | Check redirect URI in Google Console matches `api.yourdomain.com` |
-| `NEXT_PUBLIC_API_URL` wrong in browser | Redeploy (not restart) frontend after changing this var |
+| Google OAuth fails | Check Google provider config in Supabase dashboard |
+| `NEXT_PUBLIC_*` wrong in browser | Redeploy (not restart) frontend after changing these vars |
 | Migrations fail on deploy | Check `DATABASE_URL` is reachable from the api container |
+| Auth errors "Invalid token" | Ensure `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are correct on the API |

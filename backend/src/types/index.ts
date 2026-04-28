@@ -16,20 +16,6 @@ declare global {
   }
 }
 
-// ── JWT Payloads ─────────────────────────────────────────────
-
-export interface AccessTokenPayload {
-  sub: string;    // userId
-  email: string;
-  type: 'access';
-}
-
-export interface RefreshTokenPayload {
-  sub: string;    // userId
-  type: 'refresh';
-  jti: string;    // unique token ID for revocation
-}
-
 // ── API Response Types ───────────────────────────────────────
 
 export interface ApiSuccessResponse<T> {

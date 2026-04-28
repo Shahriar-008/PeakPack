@@ -14,7 +14,6 @@ import {
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useUserStore } from '@/store/user';
-import { authApi, setAccessToken, setRefreshToken } from '@/lib/api';
 import { StreakCounter } from '@/components/gamification';
 import { Avatar } from '@/components/ui';
 
@@ -37,10 +36,7 @@ export function Navbar({ notifCount = 0 }: { notifCount?: number }) {
   const { user, logout } = useUserStore();
 
   const handleLogout = async () => {
-    try { await authApi.logout(); } catch {}
-    setAccessToken(null);
-    setRefreshToken(null);
-    logout();
+    await logout();
     router.push('/sign-in');
   };
 

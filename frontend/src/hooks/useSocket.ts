@@ -5,7 +5,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { useEffect, useRef } from 'react';
-import { getAccessToken } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import type { UserLevel, BadgeDefinition } from '@/types';
 
 // ── Socket.IO is loaded client-side only ─────────────────────
@@ -15,9 +15,11 @@ let _socket: any = null;
 async function getSocket(): Promise<any> {
   if (_socket?.connected) return _socket;
 
-  const { io } = await import('socket.io-client');
-  const token = getAccessToken();
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
   if (!token) return null;
+
+  const { io } = await import('socket.io-client');
 
   _socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000', {
     auth: { token },

@@ -5,6 +5,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, UserLevel } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { disconnectSocket } from '@/lib/socket';
 
 interface UserState {
   // State
@@ -18,7 +20,7 @@ interface UserState {
   addXP: (xp: number) => void;
   setStreak: (streak: number) => void;
   setLevel: (level: UserLevel) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 export const useUserStore = create<UserState>()(
@@ -57,12 +59,18 @@ export const useUserStore = create<UserState>()(
           user: state.user ? { ...state.user, level } : null,
         })),
 
-      logout: () =>
+      logout: async () => {
+        // Sign out from Supabase
+        await supabase.auth.signOut();
+        // Disconnect Socket.IO
+        disconnectSocket();
+        // Clear store
         set({
           user: null,
           isAuthenticated: false,
           isLoading: false,
-        }),
+        });
+      },
     }),
     {
       name: 'pp-user-store',
