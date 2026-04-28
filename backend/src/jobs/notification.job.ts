@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { Worker, Job } from 'bullmq';
-import { redis } from '../lib/redis';
+import { redis, createBullMQConnection } from '../lib/redis';
 import { logger } from '../lib/logger';
 import { emitToUser } from '../lib/socket';
 import type { NotificationJobData } from './queue';

@@ -33,5 +33,22 @@ redis.on('close', () => {
   logger.warn('Redis: connection closed');
 });
 
+// ── BullMQ-compatible connection ──────────────────────────────
+// BullMQ workers use blocking commands that require maxRetriesPerRequest: null.
+// This creates a separate Redis instance for BullMQ use.
+export function createBullMQConnection(): Redis {
+  return new Redis(REDIS_URL, {
+    maxRetriesPerRequest: null,
+    retryStrategy(times: number) {
+      if (times > 10) {
+        logger.error('Redis (BullMQ): max retries reached, giving up');
+        return null;
+      }
+      return Math.min(times * 200, 5000);
+    },
+  });
+}
+
 export { redis };
 export default redis;
+
