@@ -27,6 +27,9 @@ ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 # Disable Next.js telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Ensure public directory exists even if empty
+RUN mkdir -p /app/public
+
 RUN npm run build
 
 # ── Stage 3: Runner ──────────────────────────────────────────────
