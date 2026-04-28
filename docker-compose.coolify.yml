@@ -4,14 +4,14 @@
 # ⚠  COOLIFY RULES (read before editing):
 #   1. NO `networks:` block — Coolify auto-manages networking
 #   2. NO nginx — Coolify uses Traefik as reverse proxy
-#   3. NO postgres/minio — postgres is on Supabase, MinIO is a Coolify Resource
-#   4. Services talk to each other by service name (e.g. api:4000)
-#   5. Domains are assigned in the Coolify UI per-service
+#   3. NO postgres — hosted on Supabase (managed)
+#   4. NO MinIO — using Supabase Storage instead
+#   5. Services talk to each other by service name (e.g. api:4000)
+#   6. Domains are assigned in the Coolify UI per-service
 #
 # Routing (separate subdomains):
 #   yourdomain.com        → frontend:3000
 #   api.yourdomain.com    → api:4000  (also handles Socket.IO)
-#   media.yourdomain.com  → MinIO (Coolify Resource, exposed separately)
 # ══════════════════════════════════════════════════════════════
 
 services:
@@ -56,14 +56,6 @@ services:
       - REDIS_URL=${REDIS_URL}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
-      - MINIO_PORT=${MINIO_PORT:-9000}
-      - MINIO_USE_SSL=${MINIO_USE_SSL:-true}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET_AVATARS=${MINIO_BUCKET_AVATARS:-avatars}
-      - MINIO_BUCKET_PHOTOS=${MINIO_BUCKET_PHOTOS:-progress-photos}
-      - MINIO_PUBLIC_URL=${MINIO_PUBLIC_URL}
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}
@@ -93,13 +85,6 @@ services:
       - REDIS_URL=${REDIS_URL}
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
-      - MINIO_PORT=${MINIO_PORT:-9000}
-      - MINIO_USE_SSL=${MINIO_USE_SSL:-true}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET_AVATARS=${MINIO_BUCKET_AVATARS:-avatars}
-      - MINIO_BUCKET_PHOTOS=${MINIO_BUCKET_PHOTOS:-progress-photos}
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER}

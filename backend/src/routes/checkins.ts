@@ -15,7 +15,7 @@ import { errors } from '../middleware/error.middleware';
 import { calculateXP, awardXP } from '../services/xp.service';
 import { increment as incrementStreak } from '../services/streak.service';
 import { checkAndAward } from '../services/badge.service';
-import { minioService } from '../services/minio.service';
+import { storageService } from '../services/storage.service';
 import type { AuthenticatedRequest } from '../types';
 
 const router = Router();
@@ -395,8 +395,8 @@ router.post(
       if (!checkIn) throw errors.notFound('Check-in not found');
       if (checkIn.userId !== userId) throw errors.forbidden();
 
-      // Upload to MinIO
-      const objectKey = await minioService.uploadProgressPhoto(
+      // Upload to Supabase Storage
+      const objectKey = await storageService.uploadProgressPhoto(
         userId,
         checkInIdStr,
         req.file.buffer,
@@ -415,8 +415,8 @@ router.post(
           : Promise.resolve(null),
       ]);
 
-      // Generate signed URL for immediate display
-      const photoUrl = await minioService.getSignedUrl(objectKey);
+      // Get public URL for immediate display
+      const photoUrl = storageService.getPhotoUrl(objectKey);
 
       res.json({ data: { photoKey: objectKey, photoUrl } });
     } catch (error) {

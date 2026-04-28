@@ -9,7 +9,7 @@ import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { validate, validateParams } from '../middleware/validate.middleware';
 import { errors } from '../middleware/error.middleware';
-import { minioService } from '../services/minio.service';
+import { storageService } from '../services/storage.service';
 import { getLevelProgress } from '../lib/constants';
 import type { AuthenticatedRequest } from '../types';
 
@@ -123,8 +123,8 @@ router.post(
 
       if (!req.file) throw errors.badRequest('No avatar file provided');
 
-      // Upload to MinIO
-      const objectKey = await minioService.uploadAvatar(
+      // Upload to Supabase Storage
+      const objectKey = await storageService.uploadAvatar(
         userId,
         req.file.buffer,
         req.file.mimetype
@@ -133,7 +133,7 @@ router.post(
       // Delete old avatar if exists
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { avatarKey: true } });
       if (user?.avatarKey && user.avatarKey !== objectKey) {
-        await minioService.deleteObject(user.avatarKey).catch(() => {});
+        await storageService.deleteAvatar(user.avatarKey).catch(() => {});
       }
 
       const updated = await prisma.user.update({
@@ -142,7 +142,7 @@ router.post(
         select: { id: true, avatarKey: true },
       });
 
-      const avatarUrl = await minioService.getSignedUrl(objectKey);
+      const avatarUrl = storageService.getAvatarUrl(objectKey);
 
       res.json({ data: { avatarKey: objectKey, avatarUrl } });
     } catch (error) {
