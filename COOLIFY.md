@@ -7,13 +7,12 @@ This guide walks through deploying PeakPack using [Coolify](https://coolify.io) 
 ```
 yourdomain.com          → Coolify Traefik → frontend:3000  (Next.js)
 api.yourdomain.com      → Coolify Traefik → api:4000       (Express + Socket.IO)
-media.yourdomain.com    → Coolify Traefik → MinIO          (object storage)
+                                             worker         (BullMQ background jobs)
 ```
 
-Services **not** in the Docker Compose:
-- **Supabase** (managed — PostgreSQL + Auth)
-- **Redis 7** (Coolify Resource)
-- **MinIO** (Coolify Resource)
+External managed services:
+- **Supabase** — PostgreSQL, Auth, and Storage (avatars + progress photos)
+- **Redis 7** — Coolify Resource (leaderboards, BullMQ queues, cache)
 
 ---
 
@@ -36,6 +35,15 @@ Services **not** in the Docker Compose:
 > [!TIP]
 > Supabase handles all OAuth flows, token refresh, and email verification.
 > You no longer need `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET` in your app's env vars.
+
+### Create Storage Buckets
+
+1. Go to **Storage** in the Supabase dashboard
+2. Create bucket: `avatars` — set to **Public**
+3. Create bucket: `progress-photos` — set to **Public**
+
+> [!NOTE]
+> The backend auto-creates these on startup, but creating manually ensures the public policy is correct.
 
 ---
 
@@ -63,11 +71,9 @@ Then open `http://YOUR_VPS_IP:8000` and complete the initial setup.
 
 ---
 
-## Step 4 — Create Coolify Resources
+## Step 4 — Create Redis Resource
 
-Go to your **Project** → **New Resource** for each of the following:
-
-### Redis 7
+Go to your **Project** → **New Resource**:
 
 | Setting | Value |
 |---------|-------|
@@ -76,21 +82,8 @@ Go to your **Project** → **New Resource** for each of the following:
 
 Copy the **Connection String** — it will be your `REDIS_URL`.
 
-### MinIO
-
-| Setting | Value |
-|---------|-------|
-| Resource type | MinIO |
-| Domain | `media.yourdomain.com` |
-
-After creating:
-1. Open the MinIO console at `media.yourdomain.com` (or port 9001)
-2. Create two buckets: `avatars` and `progress-photos`
-3. Set both buckets to **public read** (for serving images)
-4. Copy the **Access Key** and **Secret Key**
-
 > [!NOTE]
-> PostgreSQL is **not** created as a Coolify Resource — it's hosted on Supabase.
+> No MinIO or PostgreSQL resources needed — both are handled by Supabase.
 
 ---
 
@@ -98,8 +91,8 @@ After creating:
 
 1. Go to your **Project** → **New Resource** → **Docker Compose**
 2. Select your GitHub repo
-3. Set **Docker Compose file** to: `docker-compose.coolify.yml`
-4. Click **Save**
+3. Set **Docker Compose Location** to: `/docker-compose.coolify.yml`
+4. Click **Save**, then **Load Compose File**
 
 ---
 
@@ -136,17 +129,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...your-anon-key
 DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
 
 # ── Redis (from Step 4) ─────────────────────────────────────
-REDIS_URL=redis://HOST:6379
-
-# ── MinIO (from Step 4) ─────────────────────────────────────
-MINIO_ENDPOINT=<MinIO internal hostname in Coolify>
-MINIO_PORT=9000
-MINIO_USE_SSL=true
-MINIO_ACCESS_KEY=your_minio_access_key
-MINIO_SECRET_KEY=your_minio_secret_key
-MINIO_BUCKET_AVATARS=avatars
-MINIO_BUCKET_PHOTOS=progress-photos
-MINIO_PUBLIC_URL=https://media.yourdomain.com
+REDIS_URL=redis://[coolify-redis-hostname]:6379
 
 # ── Email (SMTP) ──────────────────────────────────────────────
 SMTP_HOST=smtp.yourprovider.com
@@ -166,11 +149,6 @@ SOCKET_CORS_ORIGIN=https://yourdomain.com
 > [!IMPORTANT]
 > `NEXT_PUBLIC_*` variables are baked into the Next.js build at compile time.
 > If you change them, you must **redeploy** (not just restart) the frontend.
-
-> [!NOTE]
-> For the MinIO internal hostname: in Coolify, resources on the same server can
-> communicate via the internal Docker hostname shown in the resource's connection
-> details (usually something like `peakpack-minio` or the container name).
 
 ---
 
@@ -265,8 +243,9 @@ docker logs peakpack-api-1 --tail 100 -f
 |---------|-----|
 | API returns 502 | Check api service logs; likely `DATABASE_URL` or `REDIS_URL` wrong |
 | Socket.IO disconnects | Ensure `SOCKET_CORS_ORIGIN` matches frontend domain exactly |
-| Images not loading | Check `MINIO_PUBLIC_URL` and bucket public-read policy |
+| Images not loading | Check that `avatars` and `progress-photos` buckets exist in Supabase Storage and are set to public |
 | Google OAuth fails | Check Google provider config in Supabase dashboard |
 | `NEXT_PUBLIC_*` wrong in browser | Redeploy (not restart) frontend after changing these vars |
 | Migrations fail on deploy | Check `DATABASE_URL` is reachable from the api container |
 | Auth errors "Invalid token" | Ensure `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are correct on the API |
+| Storage upload fails | Ensure `SUPABASE_SERVICE_ROLE_KEY` is set on both `api` and `worker` services |

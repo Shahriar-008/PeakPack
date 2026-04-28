@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/user';
 import { packsApi } from '@/lib/api';
@@ -9,8 +9,9 @@ import { Loader2, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
 export default function JoinPackPage({
   params,
 }: {
-  params: { code: string };
+  params: Promise<{ code: string }>;
 }) {
+  const { code } = use(params);
   const router = useRouter();
   const { isAuthenticated, user, isLoading: authLoading } = useUserStore();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'auth-required'>('loading');
@@ -25,7 +26,7 @@ export default function JoinPackPage({
       setStatus('auth-required');
       // Short delay then redirect — gives user time to see the message
       const timer = setTimeout(() => {
-        const returnUrl = encodeURIComponent(`/join/${params.code}`);
+        const returnUrl = encodeURIComponent(`/join/${code}`);
         router.replace(`/sign-in?returnUrl=${returnUrl}`);
       }, 1500);
       return () => clearTimeout(timer);
@@ -34,7 +35,7 @@ export default function JoinPackPage({
     // Attempt to join the pack
     const joinPack = async () => {
       try {
-        const pack = await packsApi.join(params.code);
+        const pack = await packsApi.join(code);
         setPackName(pack.name || 'your new Pack');
         setStatus('success');
         // Redirect to pack page after a short celebration
@@ -51,7 +52,7 @@ export default function JoinPackPage({
     };
 
     joinPack();
-  }, [authLoading, isAuthenticated, user, params.code, router]);
+  }, [authLoading, isAuthenticated, user, code, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[rgb(var(--background))]">
@@ -69,7 +70,7 @@ export default function JoinPackPage({
             <Loader2 className="w-8 h-8 animate-spin text-indigo-400 mx-auto" />
             <h1 className="text-2xl font-bold text-white">Joining Pack…</h1>
             <p className="text-[rgb(var(--muted-foreground))]">
-              Invite code: <code className="text-indigo-400 bg-white/5 px-2 py-0.5 rounded">{params.code}</code>
+              Invite code: <code className="text-indigo-400 bg-white/5 px-2 py-0.5 rounded">{code}</code>
             </p>
           </div>
         )}
