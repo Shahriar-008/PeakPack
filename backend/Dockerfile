@@ -37,6 +37,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json ./package.json
 
+# Create logs directory with correct ownership for Winston
+RUN mkdir -p /app/logs && chown expressjs:nodejs /app/logs
+
 USER expressjs
 
 EXPOSE 4000
