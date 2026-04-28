@@ -26,7 +26,7 @@ router.use(authMiddleware);
 // ── DOMPurify instance (server-side with jsdom) ─────────────────
 // Sanitizes comment content to prevent stored XSS
 const { window } = new JSDOM('');
-const purify = DOMPurify(window as unknown as Window);
+const purify = DOMPurify(window as any);
 
 // ── Multer — memory storage, 5 MB limit, image allowlist ─────────
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
