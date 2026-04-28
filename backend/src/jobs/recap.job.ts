@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { Worker, Job } from 'bullmq';
-import { redis } from '../lib/redis';
+import { redis, createBullMQConnection } from '../lib/redis';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
 import { queueEmail } from './queue';
@@ -13,6 +13,8 @@ import type { RecapJobData } from './queue';
 // ── Worker ────────────────────────────────────────────────────
 
 export function createRecapWorker(): Worker {
+  const connection = createBullMQConnection();
+
   const worker = new Worker<RecapJobData>(
     'recaps',
     async (job: Job<RecapJobData>) => {
@@ -102,7 +104,7 @@ export function createRecapWorker(): Worker {
       });
     },
     {
-      connection:  redis,
+      connection,
       concurrency: 10,
     }
   );

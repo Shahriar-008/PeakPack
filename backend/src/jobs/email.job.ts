@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { Worker, Job } from 'bullmq';
-import { redis } from '../lib/redis';
+import { createBullMQConnection } from '../lib/redis';
 import { logger } from '../lib/logger';
 import {
   sendWelcomeEmail,
@@ -17,6 +17,8 @@ import type { EmailJobData } from './queue';
 // ── Worker ────────────────────────────────────────────────────
 
 export function createEmailWorker(): Worker {
+  const connection = createBullMQConnection();
+
   const worker = new Worker<EmailJobData>(
     'emails',
     async (job: Job<EmailJobData>) => {
@@ -72,7 +74,7 @@ export function createEmailWorker(): Worker {
       logger.info('Email job processed', { jobId: job.id, type, to });
     },
     {
-      connection:  redis,
+      connection,
       concurrency: 5, // email sending is rate-limited by SMTP
     }
   );

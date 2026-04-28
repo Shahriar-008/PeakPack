@@ -11,6 +11,8 @@ import type { NotificationJobData } from './queue';
 // ── Worker ────────────────────────────────────────────────────
 
 export function createNotificationWorker(): Worker {
+  const connection = createBullMQConnection();
+
   const worker = new Worker<NotificationJobData>(
     'notifications',
     async (job: Job<NotificationJobData>) => {
@@ -55,7 +57,7 @@ export function createNotificationWorker(): Worker {
       logger.info('Notification processed', { jobId: job.id, userId, type });
     },
     {
-      connection: redis,
+      connection,
       concurrency: 20,
     }
   );
