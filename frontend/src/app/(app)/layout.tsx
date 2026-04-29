@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/user';
 import { Navbar } from '@/components/layout';
+import { supabase } from '@/lib/supabase';
+import { authApi } from '@/lib/api';
 
 /**
  * App layout — wraps all protected routes.
@@ -11,20 +13,51 @@ import { Navbar } from '@/components/layout';
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, user, isLoading } = useUserStore();
+  const { isAuthenticated, user, isLoading, setUser } = useUserStore();
+  const [isRecovering, setIsRecovering] = useState(false);
 
   useEffect(() => {
     if (isLoading) return;
+
     if (!isAuthenticated || !user) {
-      router.replace('/sign-in');
-      return;
+      let cancelled = false;
+
+      const recoverSession = async () => {
+        setIsRecovering(true);
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (cancelled) return;
+
+        if (!session?.user) {
+          setIsRecovering(false);
+          router.replace('/sign-in');
+          return;
+        }
+
+        try {
+          const syncedUser = await authApi.syncUser(undefined, session.access_token);
+          if (cancelled) return;
+          setUser(syncedUser);
+        } catch {
+          if (cancelled) return;
+          router.replace('/sign-in');
+        } finally {
+          if (!cancelled) setIsRecovering(false);
+        }
+      };
+
+      recoverSession();
+      return () => {
+        cancelled = true;
+      };
     }
+
     if (!user.onboardingDone) {
       router.replace('/onboarding');
     }
-  }, [isAuthenticated, user, isLoading, router]);
+  }, [isAuthenticated, user, isLoading, router, setUser]);
 
-  if (isLoading || !isAuthenticated || !user) {
+  if (isLoading || isRecovering || !isAuthenticated || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[rgb(var(--background))]">
         <div className="flex flex-col items-center gap-4">
@@ -44,4 +77,3 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-

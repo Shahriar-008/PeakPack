@@ -35,10 +35,16 @@ export default function AuthCallbackPage() {
         }
 
         if (session?.user) {
-          // Sync Prisma user record (creates on first OAuth login)
-          const user = await authApi.syncUser(undefined, session.access_token);
-          setUser(user);
-          router.replace(user.onboardingDone ? '/dashboard' : '/onboarding');
+          try {
+            // Sync Prisma user record (creates on first OAuth login)
+            const user = await authApi.syncUser(undefined, session.access_token);
+            setUser(user);
+            router.replace(user.onboardingDone ? '/dashboard' : '/onboarding');
+          } catch {
+            // Session exists but backend sync may be temporarily unavailable.
+            // Continue to onboarding; protected layout can recover/sync again.
+            router.replace('/onboarding');
+          }
         } else {
           // No session — Supabase may still be processing.
           // Listen for the auth state change event.
@@ -50,7 +56,7 @@ export default function AuthCallbackPage() {
                   setUser(user);
                   router.replace(user.onboardingDone ? '/dashboard' : '/onboarding');
                 } catch {
-                  router.replace('/sign-in');
+                  router.replace('/onboarding');
                 }
                 subscription.unsubscribe();
               }
