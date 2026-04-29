@@ -46,6 +46,11 @@ export default function DashboardPage() {
     enabled: !!myPack?.id,
   });
 
+  const { data: communityFeed } = useQuery({
+    queryKey: ['community-feed'],
+    queryFn: () => checkinsApi.getCommunity(1, 6),
+  });
+
   const handleCheckInSuccess = (result: CheckInResponse) => {
     if (result.xpEarned) setXpToast(result.xpEarned);
     if (result.levelUp) {
@@ -144,6 +149,25 @@ export default function DashboardPage() {
           </a>
         </motion.div>
       )}
+
+      <motion.div {...fadeUp(0.25)} className="mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-bold text-sm flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            Community Activity
+          </h2>
+        </div>
+        <div className="space-y-3">
+          {(communityFeed?.data || []).length === 0 && (
+            <p className="text-center text-sm text-[rgb(var(--muted-foreground))] py-6 rounded-2xl border border-white/10">
+              No community posts yet. Be one of the first to check in.
+            </p>
+          )}
+          {(communityFeed?.data || []).map((ci: CheckIn) => (
+            <CheckInCard key={`community-${ci.id}`} checkIn={ci} currentUserId={user?.id} />
+          ))}
+        </div>
+      </motion.div>
 
       {/* Modals & Overlays */}
       <CheckInModal

@@ -210,6 +210,78 @@ router.get('/me', async (req: Request, res: Response, next: NextFunction) => {
 
 // ── GET /api/checkins/:id ────────────────────────────────────
 
+// Community-wide recent feed (excluding current user)
+router.get('/community', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as AuthenticatedRequest).user.id;
+    const page = Math.max(1, parseInt(req.query.page as string || '1', 10));
+    const limit = Math.min(30, Math.max(1, parseInt(req.query.limit as string || '15', 10)));
+    const skip = (page - 1) * limit;
+
+    const [checkIns, total] = await Promise.all([
+      prisma.checkIn.findMany({
+        where: { userId: { not: userId } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarKey: true,
+              level: true,
+              streak: true,
+              packMembership: {
+                include: {
+                  pack: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          reactions: {
+            include: {
+              user: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+          comments: {
+            include: {
+              user: {
+                select: { id: true, name: true, avatarKey: true },
+              },
+            },
+            orderBy: { createdAt: 'asc' },
+            take: 2,
+          },
+          _count: { select: { comments: true } },
+        },
+      }),
+      prisma.checkIn.count({
+        where: { userId: { not: userId } },
+      }),
+    ]);
+
+    res.json({
+      data: checkIns,
+      pagination: {
+        page,
+        limit,
+        total,
+        hasMore: skip + checkIns.length < total,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get(
   '/:id',
   validateParams(idParamSchema),
@@ -426,3 +498,4 @@ router.post(
 );
 
 export default router;
+

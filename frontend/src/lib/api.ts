@@ -173,6 +173,11 @@ export const checkinsApi = {
       params: { limit },
     }).then((r) => r.data.data),
 
+  getCommunity: (page = 1, limit = 15) =>
+    api.get<PaginatedResponse<CheckIn>>('/checkins/community', {
+      params: { page, limit },
+    }).then((r) => r.data),
+
   react: (checkInId: string, type: ReactionType) =>
     api.post<ApiResponse<Reaction[]>>(`/checkins/${checkInId}/react`, { type }).then((r) => r.data.data),
 
