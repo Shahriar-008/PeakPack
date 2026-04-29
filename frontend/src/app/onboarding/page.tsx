@@ -68,7 +68,11 @@ export default function OnboardingPage() {
       router.push('/dashboard');
     },
     onError: (err: any) => {
-      setStepError(err?.response?.data?.error?.message || 'Could not finish onboarding. Please try again.');
+      setStepError(
+        err?.response?.data?.error?.message ||
+        (err?.message?.includes('Network Error') ? 'Could not reach the server. Please check your connection and try again.' : null) ||
+        'Could not finish onboarding. Please try again.'
+      );
     },
   });
 
