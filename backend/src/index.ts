@@ -78,7 +78,13 @@ app.get('/api/metrics', async (_req, res) => {
   }
 });
 
-// ── Health Check ─────────────────────────────────────────────
+// ── Liveness Probe (no external deps) ────────────────────────
+// Used by Coolify / Docker healthcheck — always returns 200
+app.get('/api/healthz', (_req, res) => {
+  res.status(200).json({ status: 'alive' });
+});
+
+// ── Health Check (deep) ──────────────────────────────────────
 
 app.get('/api/health', async (_req, res) => {
   try {

@@ -20,7 +20,7 @@ export const apiLimiter = rateLimit({
       code:    'RATE_LIMITED',
     },
   },
-  skip: (req) => req.path === '/api/health' || req.path === '/api/metrics',
+  skip: (req) => req.path === '/api/health' || req.path === '/api/healthz' || req.path === '/api/metrics',
 });
 
 // ── Auth endpoints: 10 requests per minute per IP ─────────────
