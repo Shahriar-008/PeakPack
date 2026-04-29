@@ -16,9 +16,6 @@ import { redis } from './lib/redis';
 import { errorHandler } from './middleware/error.middleware';
 import { apiLimiter, authLimiter } from './middleware/rate-limit.middleware';
 import { initSocket } from './lib/socket';
-import { createNotificationWorker } from './jobs/notification.job';
-import { createEmailWorker }        from './jobs/email.job';
-import { createRecapWorker }        from './jobs/recap.job';
 import { closeQueues }              from './jobs/queue';
 import { startAllCrons, stopAllCrons } from './crons';
 import authRouter          from './routes/auth';
@@ -144,22 +141,56 @@ app.use(errorHandler);
 // ── Start Server ─────────────────────────────────────────────
 
 const PORT = parseInt(process.env.PORT || '4000', 10);
+const DATABASE_URL = process.env.DATABASE_URL || '';
+
+function validateCriticalConfig(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  if (!DATABASE_URL) {
+    logger.error('Startup config error: DATABASE_URL is missing');
+    process.exit(1);
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(DATABASE_URL);
+  } catch {
+    logger.error('Startup config error: DATABASE_URL is not a valid URL');
+    process.exit(1);
+    return;
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  const port = parsed.port;
+  const sslmode = (parsed.searchParams.get('sslmode') || '').toLowerCase();
+  const isSupabaseDirectHost = host.startsWith('db.') && host.endsWith('.supabase.co');
+
+  if (isSupabaseDirectHost && port === '5432') {
+    logger.error(
+      'Startup config error: Supabase direct DB host (:5432) detected. Use Supabase pooler host (:6543).',
+      { host, port }
+    );
+    process.exit(1);
+  }
+
+  if (sslmode !== 'require') {
+    logger.error(
+      'Startup config error: DATABASE_URL should include sslmode=require in production.',
+      { host, port, sslmode: sslmode || '(missing)' }
+    );
+    process.exit(1);
+  }
+}
+
+validateCriticalConfig();
 
 server.listen(PORT, () => {
   logger.info(`🚀 PeakPack API running on port ${PORT}`);
   logger.info(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`   Health: http://localhost:${PORT}/api/health`);
 
-  // ── BullMQ Workers ──────────────────────────────────
-  const notificationWorker = createNotificationWorker();
-  const emailWorker        = createEmailWorker();
-  const recapWorker        = createRecapWorker();
-
   // ── Cron Jobs ─────────────────────────────────────────
   startAllCrons();
-
-  // Attach workers to server for graceful shutdown reference
-  (server as any).__workers = [notificationWorker, emailWorker, recapWorker];
 });
 
 // ── Graceful Shutdown ────────────────────────────────────────
@@ -172,11 +203,6 @@ const gracefulShutdown = async (signal: string) => {
 
     // Stop crons first (no new jobs)
     stopAllCrons();
-
-    // Close BullMQ workers
-    const workers: any[] = (server as any).__workers ?? [];
-    await Promise.allSettled(workers.map((w) => w.close()));
-    logger.info('BullMQ workers closed');
 
     // Close queues
     await closeQueues();
@@ -219,3 +245,4 @@ process.on('uncaughtException', (error) => {
 });
 
 export { app, server };
+
