@@ -59,13 +59,12 @@ export default function SignUpPage() {
       if (data.session) {
         // Session available immediately (email confirmation disabled)
         // Sync the Prisma User record
-        const user = await authApi.syncUser(name);
+        const user = await authApi.syncUser(name, data.session.access_token);
         setUser(user);
         router.push('/onboarding');
       } else {
         // Email confirmation required — Supabase sent a confirmation email
-        // Redirect to a confirmation notice page or show a message
-        setApiError('Check your email to confirm your account, then sign in.');
+        setApiError('Account created. Check your email inbox (and spam) to confirm, then sign in.');
       }
     } catch (err: any) {
       setApiError(err?.response?.data?.error?.message || 'Registration failed');

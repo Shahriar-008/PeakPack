@@ -88,8 +88,18 @@ export const authApi = {
    * Called after Supabase sign-up or sign-in to sync the Prisma User record.
    * The Supabase token is automatically attached by the request interceptor.
    */
-  syncUser: (name?: string) =>
-    api.post<ApiResponse<{ user: User }>>('/auth/callback', { name }).then((r) => r.data.data.user),
+  syncUser: (name?: string, accessToken?: string) =>
+    api.post<ApiResponse<{ user: User }>>(
+      '/auth/callback',
+      { name },
+      accessToken
+        ? {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        : undefined
+    ).then((r) => r.data.data.user),
 
   /**
    * Server-side logout cleanup.

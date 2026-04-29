@@ -36,7 +36,7 @@ export default function AuthCallbackPage() {
 
         if (session?.user) {
           // Sync Prisma user record (creates on first OAuth login)
-          const user = await authApi.syncUser();
+          const user = await authApi.syncUser(undefined, session.access_token);
           setUser(user);
           router.replace(user.onboardingDone ? '/dashboard' : '/onboarding');
         } else {
@@ -46,7 +46,7 @@ export default function AuthCallbackPage() {
             async (event, session) => {
               if (event === 'SIGNED_IN' && session?.user) {
                 try {
-                  const user = await authApi.syncUser();
+                  const user = await authApi.syncUser(undefined, session.access_token);
                   setUser(user);
                   router.replace(user.onboardingDone ? '/dashboard' : '/onboarding');
                 } catch {

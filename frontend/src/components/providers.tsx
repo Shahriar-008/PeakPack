@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         try {
           // Sync Prisma user record
-          const user = await authApi.syncUser();
+          const user = await authApi.syncUser(undefined, session.access_token);
           setUser(user);
         } catch {
           // User record might not exist yet for OAuth — will be created on callback
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
           try {
-            const user = await authApi.syncUser();
+            const user = await authApi.syncUser(undefined, session.access_token);
             setUser(user);
           } catch {
             // Will be handled by the page

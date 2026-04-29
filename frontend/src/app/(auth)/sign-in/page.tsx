@@ -37,12 +37,12 @@ export default function SignInPage() {
 
       if (data.session) {
         // Sync Prisma user record and populate store
-        const user = await authApi.syncUser();
+        const user = await authApi.syncUser(undefined, data.session.access_token);
         setUser(user);
         router.push(user.onboardingDone ? '/dashboard' : '/onboarding');
       }
     } catch (err: any) {
-      setError(err?.response?.data?.error?.message || 'Sign in failed');
+      setError(err?.response?.data?.error?.message || 'Sign in failed. Please try again.');
     } finally {
       setLoading(false);
     }
