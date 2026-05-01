@@ -5,7 +5,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().trim().optional(),
   REDIS_URL: z.string().trim().default('redis://localhost:6379'),
-  CORS_ORIGIN: z.string().trim().default('http://localhost:3000'),
+  CORS_ORIGIN: z.string().trim().optional(),
+  SOCKET_CORS_ORIGIN: z.string().trim().optional(),
 });
 
 export type AppEnv = Readonly<{
@@ -19,6 +20,10 @@ export type AppEnv = Readonly<{
 export function parseEnv(rawEnv: NodeJS.ProcessEnv = process.env): AppEnv {
   const parsedEnv = envSchema.parse(rawEnv);
   const normalizedDatabaseUrl = parsedEnv.DATABASE_URL?.trim();
+  const corsOrigin =
+    parsedEnv.CORS_ORIGIN ||
+    parsedEnv.SOCKET_CORS_ORIGIN ||
+    'http://localhost:3000';
   const databaseUrl =
     normalizedDatabaseUrl ||
     (parsedEnv.NODE_ENV === 'production' ? '' : 'postgresql://localhost:5432/peakpack');
@@ -32,6 +37,6 @@ export function parseEnv(rawEnv: NodeJS.ProcessEnv = process.env): AppEnv {
     PORT: parsedEnv.PORT,
     DATABASE_URL: databaseUrl,
     REDIS_URL: parsedEnv.REDIS_URL,
-    CORS_ORIGIN: parsedEnv.CORS_ORIGIN,
+    CORS_ORIGIN: corsOrigin,
   };
 }

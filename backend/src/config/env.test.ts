@@ -25,3 +25,9 @@ test('parseEnv falls back to default DATABASE_URL when empty in non-production',
 
   assert.equal(env.DATABASE_URL, 'postgresql://localhost:5432/peakpack');
 });
+
+test('parseEnv accepts SOCKET_CORS_ORIGIN as fallback for CORS_ORIGIN', () => {
+  const env = parseEnv({ SOCKET_CORS_ORIGIN: 'https://peakpack.app' });
+
+  assert.equal(env.CORS_ORIGIN, 'https://peakpack.app');
+});
