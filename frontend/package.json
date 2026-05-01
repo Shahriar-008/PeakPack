@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src eslint.config.mjs"
+    "lint": "eslint src eslint.config.mjs",
+    "test:assets": "node scripts/validate-public-image-signatures.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.0",

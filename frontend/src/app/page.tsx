@@ -56,7 +56,7 @@ export default function RootPage() {
         className="pointer-events-none fixed inset-0 z-0"
       >
         <Image 
-          src="/bg_energy.png" 
+          src="/bg_energy.jpg" 
           alt="Energy Background" 
           fill 
           className="object-cover opacity-20 mix-blend-screen"
@@ -124,7 +124,7 @@ export default function RootPage() {
           >
             <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.5rem] border border-white/10 shadow-[0_0_40px_rgba(0,0,0,0.8)]">
               <Image 
-                src="/hero.png" 
+                src="/hero.jpg" 
                 alt="Pack working out together" 
                 fill 
                 className="object-cover"
@@ -217,7 +217,7 @@ export default function RootPage() {
 
         {/* The Vibe & Goal Section */}
         <section className="relative my-24 overflow-hidden border-y border-white/5 bg-surface-container-lowest/50 py-32">
-          <div className="absolute inset-0 bg-[url('/bg_energy.png')] bg-cover bg-center opacity-5 mix-blend-screen" />
+          <div className="absolute inset-0 bg-[url('/bg_energy.jpg')] bg-cover bg-center opacity-5 mix-blend-screen" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-transparent to-[#0A0A0A]" />
           
           <div className="relative mx-auto max-w-4xl px-6 text-center">
