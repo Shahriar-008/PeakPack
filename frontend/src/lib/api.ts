@@ -26,12 +26,16 @@ import type {
 
 // ── Axios Instance ───────────────────────────────────────────
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' &&
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:4000/api'
-    : '/api');
+const publicApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+const isLocalBrowser =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+if (!publicApiUrl && process.env.NODE_ENV === 'production') {
+  throw new Error('NEXT_PUBLIC_API_URL is required in production.');
+}
+
+const API_URL = publicApiUrl || (isLocalBrowser ? 'http://localhost:4000/api' : '/api');
 
 const api = axios.create({
   baseURL: API_URL,

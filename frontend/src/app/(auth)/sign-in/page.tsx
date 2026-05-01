@@ -3,21 +3,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Mountain, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { authApi } from '@/lib/api';
 import { useUserStore } from '@/store/user';
-import { Button, Input, Card } from '@/components/ui';
 
 export default function SignInPage() {
   const router = useRouter();
   const setUser = useUserStore((s) => s.setUser);
-  const [email, setEmail]       = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd]   = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,99 +57,113 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[rgb(var(--background))]">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-violet-500/8 rounded-full blur-[120px]" />
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm relative"
-      >
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30 mb-4">
-            <Mountain className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-black">Welcome back</h1>
-          <p className="text-sm text-[rgb(var(--muted-foreground))] mt-1">Sign in to your PeakPack account</p>
+    <div 
+      className="min-h-screen flex items-center justify-center p-margin text-on-background antialiased"
+      style={{ backgroundImage: 'radial-gradient(circle at 50% -20%, #1A1A1A 0%, #0A0A0A 100%)' }}
+    >
+      <main className="w-full max-w-md relative z-10">
+        {/* Brand / Header */}
+        <div className="text-center mb-lg">
+          <h1 className="font-h1 text-h1 text-primary uppercase italic tracking-widest drop-shadow-[0_4px_20px_rgba(255,90,31,0.3)]">
+            PEAKPACK
+          </h1>
+          <p className="font-body-md text-body-md text-on-surface-variant mt-sm">
+            Ignite your inner fire.
+          </p>
         </div>
 
-        <Card className="p-6">
-          <form
-            onSubmit={handleSignIn}
-            className="space-y-4"
-          >
-            <Input
-              label="Email"
-              id="signin-email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              icon={<Mail className="w-4 h-4" />}
-              autoComplete="email"
-              required
-            />
+        {/* Glassmorphism Card */}
+        <div className="relative bg-surface/40 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] overflow-hidden">
+          {/* Subtle gradient overlay to suggest a physical metallic slab */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+          
+          <div className="p-md relative z-10">
+            <h2 className="font-h2 text-h2 text-on-surface mb-md">Sign In</h2>
+            
+            <form onSubmit={handleSignIn} className="space-y-md">
+              {/* Input: Email */}
+              <div className="flex flex-col">
+                <label className="font-label-bold text-label-bold text-on-surface-variant mb-xs uppercase tracking-wide" htmlFor="email">
+                  Email Address
+                </label>
+                <input 
+                  className="bg-surface-container-low text-on-surface font-body-md text-body-md px-sm py-sm rounded-none border-0 border-b-2 border-surface-bright focus:ring-0 focus:border-primary-container transition-colors placeholder:text-inverse-on-surface" 
+                  id="email" 
+                  name="email" 
+                  placeholder="athlete@peakpack.com" 
+                  required 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
 
-            <div className="relative">
-              <Input
-                label="Password"
-                id="signin-password"
-                type={showPwd ? 'text' : 'password'}
-                placeholder="Your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                icon={<Lock className="w-4 h-4" />}
-                autoComplete="current-password"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPwd(!showPwd)}
-                className="absolute right-3 top-9 text-[rgb(var(--muted-foreground))] hover:text-white transition-colors"
-                aria-label={showPwd ? 'Hide password' : 'Show password'}
+              {/* Input: Password */}
+              <div className="flex flex-col">
+                <div className="flex justify-between items-baseline mb-xs">
+                  <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wide" htmlFor="password">
+                    Password
+                  </label>
+                  <a className="font-body-md text-body-md text-primary text-sm hover:text-primary-fixed transition-colors" href="#">
+                    Forgot?
+                  </a>
+                </div>
+                <input 
+                  className="bg-surface-container-low text-on-surface font-body-md text-body-md px-sm py-sm rounded-none border-0 border-b-2 border-surface-bright focus:ring-0 focus:border-primary-container transition-colors placeholder:text-inverse-on-surface" 
+                  id="password" 
+                  name="password" 
+                  placeholder="••••••••" 
+                  required 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-error font-body-md">
+                  {error}
+                </p>
+              )}
+
+              {/* Submit Button */}
+              <button 
+                className="w-full bg-primary-container text-black font-label-bold text-label-bold py-sm px-md rounded-DEFAULT uppercase tracking-wider hover:shadow-[inset_0_0_10px_rgba(255,255,255,0.5)] transition-all active:scale-95 duration-200 mt-sm flex justify-center items-center" 
+                type="submit"
+                disabled={loading}
               >
-                {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {loading ? 'Entering...' : 'Enter the Arena'}
               </button>
+            </form>
+
+            <div className="my-md flex items-center justify-center space-x-sm">
+              <span className="h-px bg-surface-bright flex-grow"></span>
+              <span className="font-body-md text-body-md text-on-surface-variant text-sm uppercase">Or</span>
+              <span className="h-px bg-surface-bright flex-grow"></span>
             </div>
 
-            {error && (
-              <p className="text-sm text-red-400 text-center">
-                {error}
-              </p>
-            )}
+            {/* Secondary Button (Google) */}
+            <button 
+              className="w-full flex items-center justify-center space-x-sm bg-transparent border-2 border-secondary text-secondary font-label-bold text-label-bold py-sm px-md rounded-DEFAULT uppercase tracking-wider hover:bg-secondary/10 transition-colors active:scale-95 duration-200" 
+              type="button"
+              onClick={handleGoogleSignIn}
+            >
+              <span className="material-symbols-outlined">login</span>
+              <span>Continue with Google</span>
+            </button>
+          </div>
+        </div>
 
-            <Button type="submit" className="w-full" size="lg" loading={loading}>
-              Sign In <ArrowRight className="w-4 h-4" />
-            </Button>
-
-            <div className="relative flex items-center gap-3">
-              <div className="flex-1 h-px bg-white/8" />
-              <span className="text-xs text-[rgb(var(--muted-foreground))]">or</span>
-              <div className="flex-1 h-px bg-white/8" />
-            </div>
-
-            <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn}>
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Continue with Google
-            </Button>
-          </form>
-        </Card>
-
-        <p className="text-center text-sm text-[rgb(var(--muted-foreground))] mt-4">
-          New to PeakPack?{' '}
-          <Link href="/sign-up" className="text-indigo-400 hover:text-indigo-300 font-semibold">
-            Create account
-          </Link>
-        </p>
-      </motion.div>
+        {/* Sign Up Link */}
+        <div className="text-center mt-md">
+          <p className="font-body-md text-body-md text-on-surface-variant">
+            New recruit?{' '}
+            <Link className="text-primary font-label-bold hover:underline underline-offset-4 decoration-primary/50 transition-all" href="/sign-up">
+              Sign up
+            </Link>
+          </p>
+        </div>
+      </main>
     </div>
   );
 }

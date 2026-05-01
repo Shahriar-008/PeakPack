@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Inter, Lexend } from "next/font/google";
 import "./globals.css";
 import { QueryProvider, AuthProvider } from "@/components/providers";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
   display: "swap",
 });
 
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
+const lexend = Lexend({
+  subsets: ["latin"],
+  variable: "--font-lexend",
   display: "swap",
 });
 
@@ -49,8 +49,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased min-h-screen bg-background text-foreground`}
+        className={`${inter.variable} ${lexend.variable} font-sans antialiased min-h-screen bg-[#0A0A0A] text-on-surface selection:bg-primary-container selection:text-black overflow-x-hidden`}
       >
         <QueryProvider>
           <AuthProvider>

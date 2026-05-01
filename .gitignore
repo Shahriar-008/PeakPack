@@ -23,3 +23,11 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local development
+.worktrees/
+
+# Generated design artifacts
+docs/superpowers/
+frontend/stitch_peakpack_fitness_social_platform/
+

@@ -55,4 +55,20 @@ export const logger = winston.createLogger({
   ],
 });
 
+export function requestLogMeta(req: {
+  method: string;
+  path?: string;
+  url?: string;
+  originalUrl?: string;
+  requestId?: string;
+}) {
+  const route = req.path ?? req.url?.split('?')[0] ?? req.originalUrl?.split('?')[0] ?? 'unknown';
+
+  return {
+    method: req.method,
+    route,
+    requestId: req.requestId ?? 'missing',
+  };
+}
+
 export default logger;

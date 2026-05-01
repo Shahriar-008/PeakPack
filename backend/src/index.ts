@@ -10,14 +10,17 @@ import cookieParser from 'cookie-parser';
 import http from 'http';
 import { collectDefaultMetrics, register } from 'prom-client';
 
+import { parseEnv } from './config/env';
 import { logger } from './lib/logger';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
 import { errorHandler } from './middleware/error.middleware';
 import { apiLimiter, authLimiter } from './middleware/rate-limit.middleware';
+import { requestContext } from './middleware/request-context.middleware';
 import { initSocket } from './lib/socket';
 import { closeQueues }              from './jobs/queue';
 import { startAllCrons, stopAllCrons } from './crons';
+import { createSystemRouter } from './routes/system';
 import authRouter          from './routes/auth';
 import usersRouter         from './routes/users';
 import packsRouter         from './routes/packs';
@@ -29,6 +32,7 @@ import notificationsRouter from './routes/notifications';
 
 // ── Express App ──────────────────────────────────────────────
 
+const env = parseEnv(process.env);
 const app    = express();
 const server = http.createServer(app);
 
@@ -46,7 +50,7 @@ app.use(helmet());
 
 // CORS — restrict to frontend origin
 app.use(cors({
-  origin: process.env.SOCKET_CORS_ORIGIN || 'http://localhost:3000',
+  origin: env.CORS_ORIGIN,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -58,6 +62,9 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Cookies
 app.use(cookieParser());
+
+// Request context
+app.use(requestContext);
 
 // HTTP request logging
 app.use(morgan('short', {
@@ -78,42 +85,13 @@ app.get('/api/metrics', async (_req, res) => {
   }
 });
 
-// ── Liveness Probe (no external deps) ────────────────────────
-// Used by Coolify / Docker healthcheck — always returns 200
-app.get('/api/healthz', (_req, res) => {
-  res.status(200).json({ status: 'alive' });
-});
-
-// ── Health Check (deep) ──────────────────────────────────────
-
-app.get('/api/health', async (_req, res) => {
-  try {
-    // Check database
-    await prisma.$queryRaw`SELECT 1`;
-    // Check Redis
-    await redis.ping();
-
-    res.json({
-      data: {
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        services: {
-          database: 'connected',
-          redis: 'connected',
-        },
-      },
-    });
-  } catch (error) {
-    logger.error('Health check failed', { error });
-    res.status(503).json({
-      error: {
-        message: 'Service unhealthy',
-        code: 'SERVICE_UNHEALTHY',
-      },
-    });
-  }
-});
+app.use(
+  '/api',
+  createSystemRouter({
+    db: { query: () => prisma.$queryRaw`SELECT 1` },
+    redis: { ping: () => redis.ping() },
+  }),
+);
 
 // ── API Routes ───────────────────────────────────────────────
 // Auth gets a stricter rate limit (10 req/min — brute-force guard)
@@ -146,11 +124,11 @@ app.use(errorHandler);
 
 // ── Start Server ─────────────────────────────────────────────
 
-const PORT = parseInt(process.env.PORT || '4000', 10);
-const DATABASE_URL = process.env.DATABASE_URL || '';
+const PORT = env.PORT;
+const DATABASE_URL = env.DATABASE_URL;
 
 function validateCriticalConfig(): void {
-  if (process.env.NODE_ENV !== 'production') return;
+  if (env.NODE_ENV !== 'production') return;
 
   if (!DATABASE_URL) {
     logger.error('Startup config error: DATABASE_URL is missing');
@@ -192,7 +170,7 @@ validateCriticalConfig();
 
 server.listen(PORT, () => {
   logger.info(`🚀 PeakPack API running on port ${PORT}`);
-  logger.info(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`   Environment: ${env.NODE_ENV}`);
   logger.info(`   Health: http://localhost:${PORT}/api/health`);
 
   // ── Cron Jobs ─────────────────────────────────────────
