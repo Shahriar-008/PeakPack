@@ -114,6 +114,8 @@ services:
       start_period: 15s
 
   # ── Worker (BullMQ — separate process for heavy jobs) ─────────
+  # NOTE: Worker uses same image as API but runs worker.js instead of index.js
+  # Migrations run in the API service before worker starts (via depends_on)
   worker:
     build:
       context: ./backend
@@ -136,6 +138,8 @@ services:
       - SMTP_PASS=${SMTP_PASS}
       - EMAIL_FROM=${EMAIL_FROM}
     depends_on:
+      api:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       redis:
