@@ -49,9 +49,21 @@ const api = axios.create({
 // Attaches the Supabase access token to every API request.
 
 api.interceptors.request.use(async (config) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
+  try {
+    // Add a timeout to prevent hanging if Supabase session check is slow
+    const sessionPromise = supabase.auth.getSession();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Session check timeout')), 5000)
+    );
+    
+    const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
+    }
+  } catch (error) {
+    // If session check fails or times out, continue without token
+    // Backend will return 401 if token is required
+    console.warn('Failed to get Supabase session:', error);
   }
   return config;
 });
