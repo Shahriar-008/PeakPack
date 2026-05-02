@@ -49,12 +49,18 @@ const api = axios.create({
 // ── Request Interceptor ──────────────────────────────────────
 // Attaches the Supabase access token to every API request.
 
+let sessionCheckCount = 0;
+
 api.interceptors.request.use(async (config) => {
   try {
-    // Add a timeout to prevent hanging if Supabase session check is slow
+    sessionCheckCount++;
+    // First call gets longer timeout (Supabase might be initializing)
+    // Subsequent calls get shorter timeout (likely cached)
+    const timeout = sessionCheckCount === 1 ? 10000 : 5000;
+    
     const sessionPromise = supabase.auth.getSession();
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Session check timeout')), 5000)
+      setTimeout(() => reject(new Error('Session check timeout')), timeout)
     );
     
     const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
