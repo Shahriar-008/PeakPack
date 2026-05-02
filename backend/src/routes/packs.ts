@@ -37,6 +37,8 @@ router.post(
       const userId = (req as AuthenticatedRequest).user.id;
       const { name, description, goalType } = req.body;
 
+      logger.info('Creating pack', { userId, name });
+
       // User can only be in one pack
       const existing = await prisma.packMember.findUnique({ where: { userId } });
       if (existing) {
@@ -50,6 +52,8 @@ router.post(
       }
 
       const inviteCode = nanoid(8).toUpperCase();
+
+      logger.info('Creating pack record', { userId, inviteCode });
 
       const pack = await prisma.pack.create({
         data: {
@@ -68,11 +72,12 @@ router.post(
             include: {
               user: { select: { id: true, name: true, avatarKey: true, level: true } },
             },
+            // Don't include pack relation to avoid circular reference in serialization
           },
         },
       });
 
-      logger.info('Pack created', { packId: pack.id, adminId: userId, name });
+      logger.info('Pack created successfully', { packId: pack.id, adminId: userId, name });
 
       res.status(201).json({ data: pack });
     } catch (error) {
