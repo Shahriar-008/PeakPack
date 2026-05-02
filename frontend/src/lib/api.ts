@@ -43,6 +43,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
+  timeout: 10000, // 10 second timeout for all requests
 });
 
 // ── Request Interceptor ──────────────────────────────────────
@@ -75,6 +76,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // Check if it's a timeout error
+    if (error.code === 'ECONNABORTED' || error.message === 'timeout of 10000ms exceeded') {
+      console.error('Request timeout', { url: error.config?.url, timeout: error.config?.timeout });
+      return Promise.reject(error);
+    }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
