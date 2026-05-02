@@ -95,6 +95,8 @@ router.patch(
       const userId = (req as AuthenticatedRequest).user.id;
       const data = req.body;
 
+      logger.info('Updating user', { userId, updates: Object.keys(data) });
+
       const updated = await prisma.user.update({
         where: { id: userId },
         data,
@@ -104,6 +106,8 @@ router.patch(
           streak: true, streakFreezes: true, notifyPrefs: true, onboardingDone: true,
         },
       });
+
+      logger.info('User updated successfully', { userId, onboardingDone: updated.onboardingDone });
 
       res.json({ data: updated });
     } catch (error) {
