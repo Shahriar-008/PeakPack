@@ -1,0 +1,118 @@
+name: CI / Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ── Type-check & lint ──────────────────────────────────────
+  typecheck:
+    name: Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend deps
+        run: npm ci
+        working-directory: backend
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: backend
+
+      - name: Type-check backend
+        run: npm run typecheck
+        working-directory: backend
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: frontend
+
+      - name: Type-check frontend
+        run: npx tsc --noEmit
+        working-directory: frontend
+
+  # ── Deploy to VPS via SSH ──────────────────────────────────
+  deploy-vps:
+    name: Deploy to VPS
+    needs: typecheck
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set up SSH key for VPS access
+      - name: Setup SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.VPS_HOSTNAME }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      # Deploy via SSH
+      - name: Deploy to VPS
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOSTNAME: ${{ secrets.VPS_HOSTNAME }}
+          VPS_APP_PATH: ${{ secrets.VPS_APP_PATH }}
+        run: |
+          echo "Deploying to VPS: $VPS_USER@$VPS_HOSTNAME:$VPS_APP_PATH"
+          ssh -v "$VPS_USER@$VPS_HOSTNAME" "cd '$VPS_APP_PATH' && bash scripts/deploy-vps.sh '$VPS_APP_PATH'"
+
+      # Verify deployment health
+      - name: Verify deployment health
+        env:
+          VPS_HOSTNAME: ${{ secrets.VPS_HOSTNAME }}
+        run: |
+          echo "Verifying deployment health..."
+          
+          # Check API health
+          API_URL="http://$VPS_HOSTNAME:4000/api/healthz"
+          echo "Checking API: $API_URL"
+          if curl -sf "$API_URL" > /dev/null; then
+            echo "✓ API is healthy"
+          else
+            echo "⚠ API health check timed out (services may still be starting)"
+          fi
+          
+          # Check Frontend
+          FRONTEND_URL="http://$VPS_HOSTNAME:3000/api/health"
+          echo "Checking Frontend: $FRONTEND_URL"
+          if curl -sf "$FRONTEND_URL" > /dev/null; then
+            echo "✓ Frontend is healthy"
+          else
+            echo "⚠ Frontend health check timed out (services may still be starting)"
+          fi
+
+      # Post-deployment logging
+      - name: Fetch deployment logs
+        if: always()
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOSTNAME: ${{ secrets.VPS_HOSTNAME }}
+          VPS_APP_PATH: ${{ secrets.VPS_APP_PATH }}
+        run: |
+          echo "=== Deployment Log ==="
+          ssh "$VPS_USER@$VPS_HOSTNAME" "tail -100 '$VPS_APP_PATH/deploy.log'" || true
+          echo ""
+          echo "=== Docker Status ==="
+          ssh "$VPS_USER@$VPS_HOSTNAME" "docker compose -f '$VPS_APP_PATH/docker-compose.vps.yml' ps" || true
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✓ Deployment completed successfully"
+          else
+            echo "✗ Deployment failed"
+          fi
