@@ -67,7 +67,7 @@ jobs:
           VPS_APP_PATH: ${{ secrets.VPS_APP_PATH }}
         run: |
           echo "Deploying to VPS: $VPS_USER@$VPS_HOSTNAME:$VPS_APP_PATH"
-          ssh -v "$VPS_USER@$VPS_HOSTNAME" "cd '$VPS_APP_PATH' && bash scripts/deploy-vps.sh '$VPS_APP_PATH'"
+          ssh -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -v "$VPS_USER@$VPS_HOSTNAME" "cd '$VPS_APP_PATH' && bash scripts/deploy-vps.sh '$VPS_APP_PATH'"
 
       # Verify deployment health
       - name: Verify deployment health
@@ -85,8 +85,8 @@ jobs:
             echo "⚠ API health check timed out (services may still be starting)"
           fi
           
-          # Check Frontend
-          FRONTEND_URL="http://$VPS_HOSTNAME:3000/api/health"
+          # Check Frontend homepage
+          FRONTEND_URL="http://$VPS_HOSTNAME:3000/"
           echo "Checking Frontend: $FRONTEND_URL"
           if curl -sf "$FRONTEND_URL" > /dev/null; then
             echo "✓ Frontend is healthy"
@@ -116,3 +116,4 @@ jobs:
           else
             echo "✗ Deployment failed"
           fi
+
