@@ -124,7 +124,7 @@ log "INFO" "[5/7] Waiting for API health check..."
 RETRIES=0
 API_HEALTHY=false
 while [ $RETRIES -lt $HEALTHCHECK_RETRIES ]; do
-  if curl -sf http://localhost:4000/api/healthz > /dev/null 2>&1; then
+  if docker compose -f "$COMPOSE_FILE" exec -T api curl -sf http://localhost:4000/api/healthz > /dev/null 2>&1; then
     log "INFO" "      ✓ API is healthy"
     API_HEALTHY=true
     break
@@ -152,7 +152,7 @@ log "INFO" "[6/7] Waiting for Frontend health check..."
 RETRIES=0
 FRONTEND_HEALTHY=false
 while [ $RETRIES -lt $HEALTHCHECK_RETRIES ]; do
-  if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+  if docker compose -f "$COMPOSE_FILE" exec -T frontend wget -qO- http://localhost:3000/api/health > /dev/null 2>&1; then
     log "INFO" "      ✓ Frontend is healthy"
     FRONTEND_HEALTHY=true
     break

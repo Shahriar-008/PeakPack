@@ -255,10 +255,10 @@ tail -100 /opt/peakpack/deploy.log
 docker compose -f /opt/peakpack/docker-compose.vps.yml ps
 
 # Check API health
-curl -I http://localhost:4000/api/healthz
+docker compose -f /opt/peakpack/docker-compose.vps.yml exec -T api curl -I http://localhost:4000/api/healthz
 
 # Check Frontend
-curl -I http://localhost:3000/api/health
+docker compose -f /opt/peakpack/docker-compose.vps.yml exec -T frontend wget -qO- http://localhost:3000/api/health
 ```
 
 ---
