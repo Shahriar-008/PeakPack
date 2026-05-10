@@ -84,6 +84,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...your-anon-key
 
 # ── Database ───────────────────────────────────────────────
 DATABASE_URL=postgresql://postgres.YOUR_REF:PASSWORD@aws-0-REGION.pooler.supabase.com:6543/postgres
+DIRECT_URL=postgresql://postgres.YOUR_REF:PASSWORD@db.YOUR_REF.supabase.co:5432/postgres?sslmode=require
 
 # ── Redis ──────────────────────────────────────────────────
 REDIS_URL=redis://localhost:6379
@@ -107,6 +108,8 @@ chmod 600 /opt/peakpack/.env
 ```
 
 > **⚠️ Important:** The `.env` file contains secrets and should never be committed to git.
+> `DATABASE_URL` should use the Supabase **pooler** URL (`:6543`) for app runtime.  
+> `DIRECT_URL` should use the Supabase **direct** URL (`db.<ref>.supabase.co:5432`) for Prisma migrations.
 
 ### 1.3 Set up Let's Encrypt SSL certificates
 
@@ -305,6 +308,17 @@ curl -I http://localhost:3000/api/health
 2. Verify DATABASE_URL: `echo $DATABASE_URL`
 3. Check redis: `docker compose -f docker-compose.vps.yml logs redis`
 4. View deployment log: `cat /opt/peakpack/deploy.log`
+
+### Migration step hangs at `Datasource "db"...`
+
+**Symptom:** deployment stops at `[3/7] Running database migrations...` and `prisma migrate deploy` prints the datasource line and then does not progress.
+
+**Cause:** Prisma migrations are running through the Supabase transaction pooler URL (`:6543`) instead of a direct database connection.
+
+**Fix:**
+1. Set `DATABASE_URL` to the Supabase pooler URL (`:6543`) for app runtime.
+2. Set `DIRECT_URL` to the Supabase direct URL (`db.<ref>.supabase.co:5432`) for Prisma migrations.
+3. Re-run deploy (`bash scripts/deploy-vps.sh /opt/peakpack`).
 
 ### Nginx returns 502 Bad Gateway
 

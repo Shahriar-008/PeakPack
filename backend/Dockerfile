@@ -44,6 +44,5 @@ USER expressjs
 
 EXPOSE 4000
 
-# Run migrations on startup, then start the API
-# (migrations are safe to run on every deploy if idempotent)
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+# Migrations are applied by deployment scripts before service startup.
+CMD ["node", "dist/index.js"]

@@ -7,6 +7,23 @@ set -euo pipefail
 
 APP_DIR="/opt/peakpack"
 COMPOSE="docker compose"
+ENV_FILE="$APP_DIR/.env"
+
+read_env_value() {
+  local key="$1"
+  local file="$2"
+  local line
+
+  line=$(grep -m1 "^${key}=" "$file" || true)
+  if [ -z "$line" ]; then
+    return 0
+  fi
+
+  line="${line#*=}"
+  line="${line%\"}"
+  line="${line#\"}"
+  printf '%s' "$line"
+}
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  PeakPack Deploy — $(date '+%Y-%m-%d %H:%M:%S')"
@@ -24,7 +41,14 @@ $COMPOSE build --no-cache frontend api
 
 # ── 3. Run DB migrations ──────────────────────────────────────
 echo "[3/7] Running database migrations..."
-$COMPOSE run --rm api npx prisma migrate deploy
+MIGRATION_URL="$(read_env_value "DIRECT_URL" "$ENV_FILE")"
+if [ -n "$MIGRATION_URL" ]; then
+  echo "      Using DIRECT_URL for Prisma migrations"
+  $COMPOSE run --rm -e DATABASE_URL="$MIGRATION_URL" api npx prisma migrate deploy
+else
+  echo "      DIRECT_URL not set, using DATABASE_URL for migrations"
+  $COMPOSE run --rm api npx prisma migrate deploy
+fi
 echo "      ✓ Migrations complete"
 
 # ── 4. Rolling update: API + Worker first ─────────────────────

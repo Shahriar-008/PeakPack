@@ -35,6 +35,22 @@ error_exit() {
   exit 1
 }
 
+read_env_value() {
+  local key="$1"
+  local file="$2"
+  local line
+
+  line=$(grep -m1 "^${key}=" "$file" || true)
+  if [ -z "$line" ]; then
+    return 0
+  fi
+
+  line="${line#*=}"
+  line="${line%\"}"
+  line="${line#\"}"
+  printf '%s' "$line"
+}
+
 # ── Validation ─────────────────────────────────────────────────
 if [ ! -d "$APP_DIR" ]; then
   error_exit "App directory not found: $APP_DIR"
@@ -82,8 +98,17 @@ log "INFO" "      ✓ Images built successfully"
 
 # ── 3. Run database migrations ─────────────────────────────────
 log "INFO" "[3/7] Running database migrations..."
-if ! docker compose -f "$COMPOSE_FILE" run --rm api npx prisma migrate deploy; then
-  error_exit "Database migrations failed"
+MIGRATION_URL="$(read_env_value "DIRECT_URL" "$APP_DIR/.env")"
+if [ -n "$MIGRATION_URL" ]; then
+  log "INFO" "      Using DIRECT_URL for Prisma migrations"
+  if ! docker compose -f "$COMPOSE_FILE" run --rm -e DATABASE_URL="$MIGRATION_URL" api npx prisma migrate deploy; then
+    error_exit "Database migrations failed"
+  fi
+else
+  log "WARN" "      DIRECT_URL is not set in .env; using DATABASE_URL for migrations"
+  if ! docker compose -f "$COMPOSE_FILE" run --rm api npx prisma migrate deploy; then
+    error_exit "Database migrations failed"
+  fi
 fi
 log "INFO" "      ✓ Migrations complete"
 
