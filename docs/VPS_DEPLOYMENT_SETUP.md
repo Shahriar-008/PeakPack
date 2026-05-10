@@ -258,7 +258,7 @@ docker compose -f /opt/peakpack/docker-compose.vps.yml ps
 docker compose -f /opt/peakpack/docker-compose.vps.yml exec -T api curl -I http://localhost:4000/api/healthz
 
 # Check Frontend
-docker compose -f /opt/peakpack/docker-compose.vps.yml exec -T frontend wget -qO- http://localhost:3000/api/health
+docker compose -f /opt/peakpack/docker-compose.vps.yml exec -T frontend wget -qO- http://localhost:3000/
 ```
 
 ---
@@ -453,7 +453,7 @@ docker compose -f /opt/peakpack/docker-compose.vps.yml logs -f nginx
 curl https://api.yourdomain.com/api/healthz
 
 # Frontend health
-curl https://yourdomain.com/api/health
+curl https://yourdomain.com/
 
 # Prometheus metrics
 curl https://api.yourdomain.com/api/metrics
