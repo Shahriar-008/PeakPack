@@ -31,3 +31,6 @@ yarn-error.log*
 docs/superpowers/
 frontend/stitch_peakpack_fitness_social_platform/
 
+# Local Copilot skill artifacts
+.agents/
+skills-lock.json
