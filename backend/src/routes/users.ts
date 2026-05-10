@@ -9,6 +9,7 @@ import { prisma } from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { validate, validateParams } from '../middleware/validate.middleware';
 import { errors } from '../middleware/error.middleware';
+import { logger } from '../lib/logger';
 import { storageService } from '../services/storage.service';
 import { getLevelProgress } from '../lib/constants';
 import type { AuthenticatedRequest } from '../types';
